@@ -115,12 +115,12 @@ def get_batch_random(files, batch_sz, f_read_dict):
     train_array = []
     train_labels = []
     for i in range(batch_sz):
-        j = random.randint(0,2399)
+        j = random.randint(0,2609)
         while j in f_read_dict:
-            j = random.randint(0,2399)
+            j = random.randint(0,2609)
         train_array.append(cv2.resize(imageio.imread(files[j][0])[:,:,:3],(66,76),interpolation=cv2.INTER_AREA).reshape(76*66*3))    
         train_labels.append(files[j][1])
-        if len(f_read_dict) == 2400:
+        if len(f_read_dict) == 2609:
             f_read_dict = {}
     return [train_array, train_labels]
 
@@ -175,7 +175,7 @@ def train(epochs,batch_sz,epsilon,train_data,test_data,reload=False):
                 
         for e in range(epochs):
             print(e+1)
-            for b in range(0,2400-batch_sz,batch_sz):
+            for b in range(0,2600-batch_sz,batch_sz):
                 ip = get_batch_random(train_data, batch_sz,files_read)
                 train_step.run(feed_dict={x:ip[0],y:ip[1],learning_rate:epsilon,keep_prob:0.5})
                 ls.append(loss.eval(feed_dict={x:ip[0],y:ip[1],learning_rate:epsilon,keep_prob:1.0}))
