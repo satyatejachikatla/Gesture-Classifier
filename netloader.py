@@ -8,6 +8,7 @@ class NetLoader:
         self.train_size = 0
         self.test_size = 0
         self.class_nums = {}
+        self.num_classes = 0
         self.labels = []
         self.files_read = {}
         self.train_data = []
@@ -26,6 +27,7 @@ class NetLoader:
                     l.append(0)
             self.labels.append(l)
         i=0
+        self.num_classes = len(self.class_nums)
         for dirname,dirnames,filenames in os.walk(self.test_dir):
             if dirname != self.test_dir:
                 self.class_nums[dirname]=i
@@ -61,8 +63,16 @@ class NetLoader:
     Get training data in a sequential manner
     """
     def get_batch(self,start,end):
-        train_array = [cv2.resize(imageio.imread(file)[:,:,:3],(66,76),interpolation=cv2.INTER_AREA).reshape(76*66*3) for file,lab in self.train_data[start:end]]
-        train_labels = [lab for file,lab in self.train_data[start:end]]
+        train_array = []
+        train_labels = []
+        for file,lab in self.train_data[start:end]:
+            img = imageio.imread(file)
+            ch = 1
+            if len(img.shape) > 2:
+                ch = min(3,img.shape[2])
+                img = img[:,:,:ch]
+            train_array.extend([cv2.resize(img,interpolation=cv2.INTER_AREA).reshape(128*128*ch)])
+            train_labels.extend([lab])
         #print(train_array)
         #print(train_labels)
         return [train_array, train_labels]
@@ -78,11 +88,27 @@ class NetLoader:
             j = random.randint(0,self.train_size-1)
             while j in self.files_read:
                 j = random.randint(0,self.train_size-1)
-            train_array.append(cv2.resize(imageio.imread(self.train_data[j][0])[:,:,:3],(66,76),interpolation=cv2.INTER_AREA).reshape(76*66*3))    
+            img = imageio.imread(self.train_data[j][0])
+            ch = 1
+            if len(img.shape) > 2:
+                ch = min(3,img.shape[2])
+                img = img[:,:,:ch]
+            train_array.append(cv2.resize(img,(128,128),interpolation=cv2.INTER_AREA).reshape(128*128*ch))    
             train_labels.append(self.train_data[j][1])
             if len(self.files_read) == self.train_size-1:
                 self.files_read = {}
         return [train_array, train_labels]
+
+    def get_single_img(self,file):
+        img = imageio.imread(file)
+        ch = 1
+        if len(img.shape) > 2:
+            ch = min(3,img.shape[2])
+            img = img[:,:,:ch]
+        ip = cv2.resize(img,(128,128),interpolation=cv2.INTER_AREA).reshape(128*128*ch)
+        return ip
+        
+        
 
     
 
