@@ -1,7 +1,7 @@
 import cnn, netloader
-"""
+'''
 Set up the data and start training or testing.
-"""
+'''
 cfg = open('params.cfg','r')
 params = cfg.readlines()
 cfg.close()

@@ -45,12 +45,12 @@ class NetLoader:
         test_data = []
         for dirname, dirnames, filenames in os.walk(self.train_dir):
             for filename in filenames:
-                if filename.endswith('jpg'):
+                if filename.endswith('jpg') or filename.endswith('pgm'):
                         train_data.append([os.path.join(dirname,filename),self.labels[self.class_nums[dirname]]])
                         self.train_size += 1
         for dirname, dirnames, filenames in os.walk(self.test_dir):
             for filename in filenames:
-                if filename.endswith('jpg'):
+                if filename.endswith('jpg') or filename.endswith('pgm'):
                     test_data.append([os.path.join(dirname,filename),self.labels[self.class_nums[dirname]]])
                     self.test_size += 1
         self.train_data = train_data
@@ -95,7 +95,7 @@ class NetLoader:
                 img = img[:,:,:ch]
             train_array.append(cv2.resize(img,(128,128),interpolation=cv2.INTER_AREA).reshape(128*128*ch))    
             train_labels.append(self.train_data[j][1])
-            if len(self.files_read) == self.train_size-1:
+            if len(self.files_read) == self.train_size:
                 self.files_read = {}
         return [train_array, train_labels]
 
