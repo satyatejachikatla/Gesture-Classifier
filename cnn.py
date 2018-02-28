@@ -44,12 +44,12 @@ y = tf.placeholder(tf.float32, shape=[None,10])
 learning_rate = tf.placeholder(tf.float32)
 keep_prob = tf.placeholder(tf.float32)
 x_img = tf.reshape(x,[-1,128,128,1])
-w1,b1,h1,p1,n1 = conv_layer(x_img,48,5)
-w2,b2,h2,p2,n2 = conv_layer(n1,24,3)
-w3,b3,h3,p3,n3 = conv_layer(n2,12,3)
+w1,b1,h1,p1,n1 = conv_layer(x_img,96,3)
+w2,b2,h2,p2,n2 = conv_layer(n1,48,3)
+w3,b3,h3,p3,n3 = conv_layer(n2,24,3)
 w4,b4,h4,r4 = conn_layer(n3,2048)
 h4_drop = tf.nn.dropout(h4,keep_prob)
-w5,b5,h5,r5 = conn_layer(h4_drop,2048)
+w5,b5,h5,r5 = conn_layer(h4_drop,1024)
 h5_drop = tf.nn.dropout(h5,keep_prob)
 w6,b6,y_,r6 = conn_layer(h5_drop,10,op_layer=True)
 
@@ -59,7 +59,7 @@ Loss function: Softmax Cross Entropy
 """
 loss0 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=y_))
 reg = r4+r5+r6
-loss = tf.reduce_mean(loss0 + 0.01*reg)
+loss = tf.reduce_mean(loss0 + 0.05*reg)
 
 """
 Adaptive moments for training
@@ -81,20 +81,20 @@ saver = tf.train.Saver({'w1':w1,'b1':b1,'w2':w2,'b2':b2,'w3':w3,'b3':b3,'w4':w4,
 Visualize output of a convolutional layer
 """
 def visualize_layer(layer,sess):
-    img = imageio.imread('./Data/Triesch/Test/1/umaschd1.jpg')
+    img = imageio.imread('./Data/Our-Train2/test/1/n_41.jpg')
     ch = 1
     if len(img.shape) > 2:
         ch = min(3,img.shape[2])
         img = img[:,:,:ch]
     ip = cv2.resize(img,(128,128),interpolation=cv2.INTER_AREA).reshape(128*128*ch)
     unit = sess.run(layer,feed_dict = {x:[ip]})
-    m = unit[0][0][0][0]
-    for i in range(unit.shape[0]):
-        for j in range(unit.shape[1]):
-            for k in range(unit.shape[2]):
-                for l in range(unit.shape[3]):
-                    m = max(m,unit[i][j][k][l])
-    unit = unit*255/m
+##    m = unit[0][0][0][0]
+##    for i in range(unit.shape[0]):
+##        for j in range(unit.shape[1]):
+##            for k in range(unit.shape[2]):
+##                for l in range(unit.shape[3]):
+##                    m = max(m,unit[i][j][k][l])
+##    unit = unit*255/m
     cv2.imshow('frame',unit[0,:,:,:3])
     cv2.waitKey(1)
 
@@ -145,7 +145,7 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
                 if b%2 == 0:
                     ls.append(loss.eval(feed_dict={x:ip[0],y:ip[1],learning_rate:epsilon,keep_prob:1.0}))
                 #print(sess.run(y_,feed_dict={x:ip[0]}))
-                visualize_layer(n3,sess)
+                #visualize_layer(n3,sess)
             if (e%(epochs/10) == 0) or epochs <= 50:
                 a,l = validate(net_loader)
                 acc.append(a)
