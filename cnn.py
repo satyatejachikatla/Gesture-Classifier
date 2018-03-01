@@ -1,4 +1,4 @@
-import tensorflow as tf, numpy as np, imageio, matplotlib.pyplot as plt, cv2, traceback
+import tensorflow as tf, numpy as np, imageio, matplotlib.pyplot as plt, cv2, traceback, os
 
 """
 Convolutional Layer with Max Pooling and Local Response Normalization
@@ -8,11 +8,11 @@ def conv_layer(in_layer,out_chan,size,sigma=0.01,b=0.0,strd=[1,1,1,1],pool=True)
     w = tf.Variable(tf.truncated_normal([size,size,in_chan,out_chan],stddev=sigma))
     b = tf.Variable(tf.constant(b, shape=[out_chan]))
     h = tf.nn.relu(tf.nn.conv2d(in_layer, w, strides=strd,padding='VALID')+b)
-    n = tf.nn.local_response_normalization(h, depth_radius=min(5,out_chan-2))
-    p = tf.nn.max_pool(n,ksize = [1,3,3,1], strides = [1,2,2,1], padding='VALID')
+    p = tf.nn.max_pool(h,ksize = [1,4,4,1], strides = [1,2,2,1], padding='VALID')
+    n = tf.nn.local_response_normalization(p, depth_radius=min(5,out_chan-2))
     n1 = tf.nn.local_response_normalization(h,depth_radius=min(5,out_chan-2))
     if pool:
-        return w,b,h,p
+        return w,b,h,p,n
     return w,b,h,n1
 
 
@@ -44,12 +44,12 @@ y = tf.placeholder(tf.float32, shape=[None,5])
 learning_rate = tf.placeholder(tf.float32)
 keep_prob = tf.placeholder(tf.float32)
 x_img = tf.reshape(x,[-1,128,128,1])
-w1,b1,h1,p1 = conv_layer(x_img,96,3)
-w2,b2,h2,p2 = conv_layer(p1,48,3)
-w3,b3,h3,p3 = conv_layer(p2,24,3)
-w4,b4,h4,r4 = conn_layer(p3,2048)
+w1,b1,h1,p1,n1 = conv_layer(x_img,96,10)
+w2,b2,h2,p2,n2 = conv_layer(p1,48,10)
+w3,b3,h3,p3,n3 = conv_layer(p2,24,10)
+w4,b4,h4,r4 = conn_layer(p3,1024)
 h4_drop = tf.nn.dropout(h4,keep_prob)
-w5,b5,h5,r5 = conn_layer(h4_drop,1024)
+w5,b5,h5,r5 = conn_layer(h4_drop,512)
 h5_drop = tf.nn.dropout(h5,keep_prob)
 w6,b6,y_,r6 = conn_layer(h5_drop,5,op_layer=True)
 
@@ -59,7 +59,7 @@ Loss function: Softmax Cross Entropy
 """
 loss0 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=y_))
 reg = r4+r5+r6
-loss = loss0 + 0.01*reg
+loss = loss0 + 0.0*reg
 
 """
 Adaptive moments for training
@@ -81,7 +81,7 @@ saver = tf.train.Saver({'w1':w1,'b1':b1,'w2':w2,'b2':b2,'w3':w3,'b3':b3,'w4':w4,
 Visualize output of a convolutional layer
 """
 def visualize_layer(layer,sess):
-    img = imageio.imread('./Data/Our-Train2/test/1/n_41.jpg')
+    img = imageio.imread('./New Data/Test/1/umaschd1.pgm')
     ch = 1
     if len(img.shape) > 2:
         ch = min(3,img.shape[2])
@@ -105,7 +105,10 @@ check validation accuracy
 def validate(net_loader,sess):
     acc = 0
     ls2 = 0
+    acc_t = 0
+    ls_t = 0
     test_data  = net_loader.test_data
+    train_data  = net_loader.train_data
     try:
         for file, lab in test_data:
             #print(file, lab)
@@ -114,14 +117,21 @@ def validate(net_loader,sess):
             #print('actual: ',np.argmax(lab), ' ',lab)
             acc += correct_prediction.eval(feed_dict={x:[ip],y:[lab],keep_prob:1.0})
             ls2 += loss.eval(feed_dict={x:[ip], y:[lab], keep_prob:1.0})
+        for file, lab in train_data:
+            ip = net_loader.get_single_img(file)
+            acc_t += correct_prediction.eval(feed_dict={x:[ip],y:[lab],keep_prob:1.0})
+            ls_t += loss.eval(feed_dict={x:[ip], y:[lab], keep_prob:1.0})
         acc /= len(test_data)
         ls2 /= len(test_data)
-        print('loss: ',ls2)
+        acc_t /= len(train_data)
+        ls_t /= len(train_data)
+        print('train loss: ',ls_t, '; train acc: ',acc_t)
+        print('test loss: ',ls2, '; test acc: ',acc)
         return acc,ls2
     except:
         traceback.print_exc()
 
-"""
+""" 
 Train the model. Inputs: number of epochs, learning rate, train and test data, and whether to continue training model or start afresh
 """
 def train(epochs,batch_sz,epsilon,net_loader,reload):
@@ -131,34 +141,54 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
     acc = []
     with tf.Session(config=tf.ConfigProto(log_device_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
-        ckpt = 'model4.ckpt'
+        ckpt = 'model5.ckpt'
+        acc_file = []
+        prev_acc = -1
+        prev_ls = -1
         if reload == 'True':
             try:
                 saver.restore(sess, net_loader.model_dir+ckpt)
                 print("Model reloaded successfully.")
+                try:
+                    acc_file = open(net_loader.model_dir+'prev_acc.txt','r')
+                    prev_acc = acc_file.readline().strip()
+                    prev_ls = acc_file.readline().strip()
+                    acc_file.close()
+                    print('previous test loss: ',prev_ls)
+                    print('previous test accuracy: ',prev_acc)
+                except OSError:
+                    pass
             except tf.errors.NotFoundError:
                 print("Model "+ckpt+" not found, will create new file")
         elif reload == 'False':
             print("'Reload' set to 'False', starting afresh")
-                
+
         for e in range(epochs):
             print(e+1)
             for b in range(0,net_loader.train_size,batch_sz):
                 ip = net_loader.get_batch_random(batch_sz)
-                train_step.run(feed_dict={x:ip[0],y:ip[1],learning_rate:epsilon,keep_prob:0.8})
+                train_step.run(feed_dict={x:ip[0],y:ip[1],learning_rate:epsilon,keep_prob:0.5})
                 if b%2 == 0:
-                    ls.append(loss.eval(feed_dict={x:ip[0],y:ip[1],learning_rate:epsilon,keep_prob:1.0}))
+                    ls.append(loss.eval(feed_dict={x:ip[0],y:ip[1],keep_prob:1.0}))
                 #print(sess.run(y_,feed_dict={x:ip[0]}))
-                #visualize_layer(n3,sess)
+                #visualize_layer(p3,sess)
             if ((e+1)%(epochs/10) == 0) or epochs <= 50:
                 a,l = validate(net_loader,sess)
                 acc.append(a)
                 ls2.append(l)
-                if len(acc)>1 and a>np.amax(acc):
-                    save_path = saver.save(sess, net_loader.model_dir+ckpt+str(e+1))
+                if len(acc)<=1 and prev_acc != -1:
+                    if a>=prev_acc and l<prev_ls:
+                        save_path = saver.save(sess, net_loader.model_dir+ckpt)
+                        print('Model saved at ', save_path)                      
+                elif a>=np.amax(acc) and l<np.amin(ls2):
+                    save_path = saver.save(sess, net_loader.model_dir+ckpt)
                     print('Model saved at ', save_path)
-        save_path = saver.save(sess, net_loader.model_dir+ckpt)
-        print('Model saved at ', save_path)
+                    acc_file = open(net_loader.model_dir+'prev_acc.txt','rw')
+                    acc_file.write(a)
+                    acc_file.write(l)
+                    acc_file.close()
+##        save_path = saver.save(sess, net_loader.model_dir+ckpt)
+##        print('Model saved at ', save_path)
         x1 = [i for i in range(len(ls))]
         x2 = [i for i in range(len(acc))]
         x3 = [i for i in range(len(ls2))]
