@@ -59,7 +59,7 @@ Loss function: Softmax Cross Entropy
 """
 loss0 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=y_))
 reg = r4+r5+r6
-loss = loss0 + 0.0*reg
+loss = loss0 + 0.01*reg
 
 """
 Adaptive moments for training
@@ -144,7 +144,7 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
         ckpt = 'model5.ckpt'
         acc_file = []
         prev_acc = -1
-        prev_ls = -1
+        prev_ls = 999999999
         if reload == 'True':
             try:
                 saver.restore(sess, net_loader.model_dir+ckpt)
@@ -174,19 +174,19 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
                 #visualize_layer(p3,sess)
             if ((e+1)%(epochs/10) == 0) or epochs <= 50:
                 a,l = validate(net_loader,sess)
-                acc.append(a)
-                ls2.append(l)
-                if len(acc)<=1 and prev_acc != -1:
+                if len(acc)<=1:
                     if a>=prev_acc and l<prev_ls:
                         save_path = saver.save(sess, net_loader.model_dir+ckpt)
                         print('Model saved at ', save_path)                      
                 elif a>=np.amax(acc) and l<np.amin(ls2):
                     save_path = saver.save(sess, net_loader.model_dir+ckpt)
                     print('Model saved at ', save_path)
-                    acc_file = open(net_loader.model_dir+'prev_acc.txt','rw')
-                    acc_file.write(a)
-                    acc_file.write(l)
+                    acc_file = open(net_loader.model_dir+'prev_acc.txt','w')
+                    acc_file.write(str(a[0])+'\n')
+                    acc_file.write(str(l)+'\n')
                     acc_file.close()
+                acc.append(a)
+                ls2.append(l)
 ##        save_path = saver.save(sess, net_loader.model_dir+ckpt)
 ##        print('Model saved at ', save_path)
         x1 = [i for i in range(len(ls))]
