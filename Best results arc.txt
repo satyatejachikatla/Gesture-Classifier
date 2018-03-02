@@ -1,0 +1,6 @@
+model5.ckpt 80%
+10x10 all over
+96,48,24 filters
+no local response normalization
+l2 reg with 0.01 multiplier
+4x4 max pool with stride 2
