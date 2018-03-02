@@ -45,9 +45,9 @@ learning_rate = tf.placeholder(tf.float32)
 keep_prob = tf.placeholder(tf.float32)
 x_img = tf.reshape(x,[-1,128,128,1])
 w1,b1,h1,p1,n1 = conv_layer(x_img,96,10)
-w2,b2,h2,p2,n2 = conv_layer(p1,48,10)
-w3,b3,h3,p3,n3 = conv_layer(p2,24,10)
-w4,b4,h4,r4 = conn_layer(p3,1024)
+w2,b2,h2,p2,n2 = conv_layer(n1,48,10)
+w3,b3,h3,p3,n3 = conv_layer(n2,24,10)
+w4,b4,h4,r4 = conn_layer(n3,1024)
 h4_drop = tf.nn.dropout(h4,keep_prob)
 w5,b5,h5,r5 = conn_layer(h4_drop,512)
 h5_drop = tf.nn.dropout(h5,keep_prob)
@@ -141,7 +141,7 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
     acc = []
     with tf.Session(config=tf.ConfigProto(log_device_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
-        ckpt = 'model5.ckpt'
+        ckpt = 'model6.ckpt'
         acc_file = []
         prev_acc = -1
         prev_ls = 999999999
@@ -151,8 +151,8 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
                 print("Model reloaded successfully.")
                 try:
                     acc_file = open(net_loader.model_dir+'prev_acc.txt','r')
-                    prev_acc = acc_file.readline().strip()
-                    prev_ls = acc_file.readline().strip()
+                    prev_acc = np.float32(acc_file.readline().strip())
+                    prev_ls = np.float32(acc_file.readline().strip())
                     acc_file.close()
                     print('previous test loss: ',prev_ls)
                     print('previous test accuracy: ',prev_acc)
