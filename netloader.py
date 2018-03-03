@@ -8,6 +8,7 @@ class NetLoader:
         self.train_size = 0
         self.test_size = 0
         self.class_nums = {}
+        self.nums_class = {}
         self.num_classes = 0
         self.labels = []
         self.files_read = {}
@@ -32,6 +33,8 @@ class NetLoader:
             if dirname != self.test_dir:
                 self.class_nums[dirname]=i
                 i += 1
+        for key in self.class_nums:
+            self.nums_class[self.class_nums[key]] = key
         self.create_data()
 
 

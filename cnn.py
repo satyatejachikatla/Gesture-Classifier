@@ -205,6 +205,7 @@ Test the model without training.
 """
 def test(net_loader):
     with tf.Session() as sess:
+        ckpt = 'model6.ckpt'
         saver.restore(sess, net_loader.model_dir+ckpt)
         acc = 0
         for file, lab in net_loader.test_data:
@@ -214,3 +215,34 @@ def test(net_loader):
             acc += correct_prediction.eval(feed_dict={x:[img], y:[lab],keep_prob:1.0})
         acc/=net_loader.test_size
     print(acc)
+
+"""
+With video check
+"""
+def foo(net_loader):
+        with tf.Session() as sess:
+                ckpt = 'model6.ckpt'
+                saver.restore(sess, net_loader.model_dir+ckpt)
+                cap = cv2.VideoCapture(0)
+                
+                while(True):
+                    # Capture frame-by-frame
+                    ret, frame = cap.read()
+
+                    # Our operations on the frame come here
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    ggray=gray
+                    cv2.rectangle(ggray,(0,0),(128,128),(0,255,0),3)
+                    # Display the resulting frame
+                    cv2.imshow('gray',ggray)
+                    cv2.waitKey(1)
+##                    if cv2.waitKey(1) & 0xFF == ord('q'):
+##                        break
+##                    elif cv2.waitKey(1) & 0xFF == ord(' '):
+                    gray=gray[0:128,0:128]
+                    gray=np.reshape(gray,[1,128*128])
+                    print(net_loader.nums_class[sess.run(tf.argmax(y_,1),feed_dict={x:gray,keep_prob:1.0})[0]])
+                    
+                # When everything done, release the capture
+                cap.release()
+                cv2.destroyAllWindows()
