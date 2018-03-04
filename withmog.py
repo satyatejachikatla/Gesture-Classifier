@@ -6,21 +6,18 @@ fgbg = cv2.createBackgroundSubtractorMOG2()
 
 cap = cv2.VideoCapture(0)
 
-fourcc = cv2.VideoWriter_fourcc(*'XVID')
-out = cv2.VideoWriter('output.avi',fourcc, 20.0, (720, 1280))
-
 while(1):
 	ret, frame = cap.read()
 	if ret == True:
 		fgmask = fgbg.apply(frame)
 		cv2.imshow('fgmask',frame)
 		cv2.imshow('frame',fgmask)
-
-		out.write(fgmask)
-	    
+		
 		k = cv2.waitKey(30) & 0xff
 		if k == 27:
 			break
+		elif k == 32:
+			cv2.imwrite('temp.jpg',cv2.cvtColor(fgmask,cv2.COLOR_GRAY2RGB))
 	else:
 		break
     
