@@ -40,7 +40,7 @@ def conn_layer(in_layer,out_nodes,op_layer=False,sigma=0.01,b=0.0):
 The architecture: 3 conv layers and  2 fc layers with dropout
 """
 x = tf.placeholder(tf.float32, shape=[None,128*128*1])
-y = tf.placeholder(tf.float32, shape=[None,5])
+y = tf.placeholder(tf.float32, shape=[None,6])
 learning_rate = tf.placeholder(tf.float32)
 keep_prob = tf.placeholder(tf.float32)
 x_img = tf.reshape(x,[-1,128,128,1])
@@ -51,7 +51,7 @@ w4,b4,h4,r4 = conn_layer(n3,1024)
 h4_drop = tf.nn.dropout(h4,keep_prob)
 w5,b5,h5,r5 = conn_layer(h4_drop,512)
 h5_drop = tf.nn.dropout(h5,keep_prob)
-w6,b6,y_,r6 = conn_layer(h5_drop,5,op_layer=True)
+w6,b6,y_,r6 = conn_layer(h5_drop,6,op_layer=True)
 
 
 """
@@ -81,7 +81,7 @@ saver = tf.train.Saver({'w1':w1,'b1':b1,'w2':w2,'b2':b2,'w3':w3,'b3':b3,'w4':w4,
 Visualize output of a convolutional layer
 """
 def visualize_layer(layer,sess):
-    img = imageio.imread('./New Data/Test/1/umaschd1.pgm')
+    img = cv2.imread('./New Data/Test/1/umaschd1.pgm',0)
     ch = 1
     if len(img.shape) > 2:
         ch = min(3,img.shape[2])
@@ -102,31 +102,29 @@ def visualize_layer(layer,sess):
 """
 check validation accuracy
 """
-def validate(net_loader,sess):
+def validate(net_loader,sess,test=False):
     acc = 0
     ls2 = 0
     acc_t = 0
     ls_t = 0
     test_data  = net_loader.test_data
-    train_data  = net_loader.train_data
+    step = 1
+    out_str = 'validation loss:'
+    if test == False:
+        step = 4
+        out_str = 'test loss:'
     try:
-        for file, lab in test_data:
+        for i in range(0,len(test_data),step):
             #print(file, lab)
-            ip = net_loader.get_single_img(file)
+            ip = net_loader.get_single_img(test_data[i][0])
+            lab = test_data[i][1]
             #print('predicted: ',np.argmax(sess.run(y_,feed_dict={x:[ip],keep_prob:1.0})))
             #print('actual: ',np.argmax(lab), ' ',lab)
             acc += correct_prediction.eval(feed_dict={x:[ip],y:[lab],keep_prob:1.0})
             ls2 += loss.eval(feed_dict={x:[ip], y:[lab], keep_prob:1.0})
-        for file, lab in train_data:
-            ip = net_loader.get_single_img(file)
-            acc_t += correct_prediction.eval(feed_dict={x:[ip],y:[lab],keep_prob:1.0})
-            ls_t += loss.eval(feed_dict={x:[ip], y:[lab], keep_prob:1.0})
-        acc /= len(test_data)
-        ls2 /= len(test_data)
-        acc_t /= len(train_data)
-        ls_t /= len(train_data)
-        print('train loss: ',ls_t, '; train acc: ',acc_t)
-        print('test loss: ',ls2, '; test acc: ',acc)
+        acc /= len(test_data)/step
+        ls2 /= len(test_data)/step
+        print(out_str,ls2, '; test acc: ',acc)
         return acc,ls2
     except:
         traceback.print_exc()
@@ -141,7 +139,7 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
     acc = []
     with tf.Session(config=tf.ConfigProto(log_device_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
-        ckpt = 'model6.ckpt'
+        ckpt = 'model1.ckpt'
         acc_file = []
         prev_acc = -1
         prev_ls = 999999999
@@ -165,20 +163,25 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
 
         for e in range(epochs):
             print(e+1)
+            l = 0
+            a = 0
             for b in range(0,net_loader.train_size,batch_sz):
                 ip = net_loader.get_batch_random(batch_sz)
                 train_step.run(feed_dict={x:ip[0],y:ip[1],learning_rate:epsilon,keep_prob:0.5})
-                if b%2 == 0:
-                    ls.append(loss.eval(feed_dict={x:ip[0],y:ip[1],keep_prob:1.0}))
-                #print(sess.run(y_,feed_dict={x:ip[0]}))
-                #visualize_layer(p3,sess)
+                l += loss.eval(feed_dict={x:ip[0],y:ip[1],keep_prob:1.0})
+                a += np.mean(correct_prediction.eval(feed_dict={x:ip[0],y:ip[1],keep_prob:1.0}))
+            l /= net_loader.train_size/batch_sz
+            a /= net_loader.train_size/batch_sz
+            print("Train loss: ",l)
+            print("Train acc: ",a)
+            ls.append(l)
             if ((e+1)%(epochs/10) == 0) or epochs <= 50:
-                a,l = validate(net_loader,sess)
+                a,l = validate(net_loader,sess,True)
                 if len(acc)<=1:
                     if a>=prev_acc and l<prev_ls:
                         save_path = saver.save(sess, net_loader.model_dir+ckpt)
                         print('Model saved at ', save_path)                      
-                elif a>=np.amax(acc) and l<np.amin(ls2):
+                elif a>=np.amax(acc) and l<np.amin(ls2) and a>=prev_acc and l<prev_ls:
                     save_path = saver.save(sess, net_loader.model_dir+ckpt)
                     print('Model saved at ', save_path)
                     acc_file = open(net_loader.model_dir+'prev_acc.txt','w')
@@ -187,6 +190,8 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
                     acc_file.close()
                 acc.append(a)
                 ls2.append(l)
+        a,l = validate(net_loader,sess,True)
+        print("Final test loss:",l," ; Final test accuracy:",a)
 ##        save_path = saver.save(sess, net_loader.model_dir+ckpt)
 ##        print('Model saved at ', save_path)
         x1 = [i for i in range(len(ls))]

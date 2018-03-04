@@ -1,4 +1,4 @@
-import os, traceback,random, cv2, imageio
+import os, traceback,random, cv2
 
 class NetLoader:
     def __init__(self, model_dir, train_dir, test_dir):
@@ -69,7 +69,7 @@ class NetLoader:
         train_array = []
         train_labels = []
         for file,lab in self.train_data[start:end]:
-            img = imageio.imread(file)
+            img = cv2.imread(file,0)
             ch = 1
             if len(img.shape) > 2:
                 ch = min(3,img.shape[2])
@@ -91,7 +91,7 @@ class NetLoader:
             j = random.randint(0,self.train_size-1)
             while j in self.files_read:
                 j = random.randint(0,self.train_size-1)
-            img = imageio.imread(self.train_data[j][0])
+            img = cv2.imread(self.train_data[j][0],0)
             ch = 1
             if len(img.shape) > 2:
                 ch = min(3,img.shape[2])
@@ -103,7 +103,7 @@ class NetLoader:
         return [train_array, train_labels]
 
     def get_single_img(self,file):
-        img = imageio.imread(file)
+        img = cv2.imread(file,0)
         ch = 1
         if len(img.shape) > 2:
             ch = min(3,img.shape[2])
