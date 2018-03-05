@@ -226,7 +226,7 @@ With video check
 """
 def foo(net_loader):
         with tf.Session() as sess:
-                ckpt = 'model6.ckpt'
+                ckpt = 'model1.ckpt'
                 saver.restore(sess, net_loader.model_dir+ckpt)
                 cap = cv2.VideoCapture(0)
                 
@@ -249,5 +249,32 @@ def foo(net_loader):
                     print(net_loader.nums_class[sess.run(tf.argmax(y_,1),feed_dict={x:gray,keep_prob:1.0})[0]])
                     
                 # When everything done, release the capture
+                cap.release()
+                cv2.destroyAllWindows()
+def foo1(net_loader):
+        with tf.Session() as sess:
+                ckpt = 'model1.ckpt'
+                saver.restore(sess, net_loader.model_dir+ckpt)
+                cap = cv2.VideoCapture(0)
+                fgbg = cv2.createBackgroundSubtractorMOG2()
+                while(1):
+                    ret, frame = cap.read()
+                    if ret == True:
+                        fgmask = fgbg.apply(frame)
+                        
+                        cv2.imshow('frame',frame[100:450,80:330,:])
+                        cv2.imshow('fgmask',fgmask[100:450,80:330])
+
+
+                        fgmask = fgmask[100:450,80:330]
+                        fgmask = cv2.resize(fgmask ,(128,128), interpolation = cv2.INTER_CUBIC)
+                        fgmask = np.reshape(fgmask , [1,128*128*1])
+                        print('Predicted :',net_loader.nums_class[sess.run(tf.argmax(y_,1),feed_dict={x:fgmask,keep_prob:1.0})[0]])	
+
+                        k = cv2.waitKey(30) & 0xff
+                        if k == 27:
+                                break
+                    else:
+                            break
                 cap.release()
                 cv2.destroyAllWindows()
