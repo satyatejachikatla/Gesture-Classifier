@@ -40,18 +40,18 @@ def conn_layer(in_layer,out_nodes,op_layer=False,sigma=0.01,b=0.0):
 The architecture: 3 conv layers and  2 fc layers with dropout
 """
 x = tf.placeholder(tf.float32, shape=[None,128*128*1])
-y = tf.placeholder(tf.float32, shape=[None,10])
+y = tf.placeholder(tf.float32, shape=[None,5])
 learning_rate = tf.placeholder(tf.float32)
 keep_prob = tf.placeholder(tf.float32)
 x_img = tf.reshape(x,[-1,128,128,1])
 w1,b1,h1,p1,n1 = conv_layer(x_img,64,16)
-w2,b2,h2,p2,n2 = conv_layer(n1,32,8)
-w3,b3,h3,p3,n3 = conv_layer(n2,16,16)
+w2,b2,h2,p2,n2 = conv_layer(p1,32,8)
+w3,b3,h3,p3,n3 = conv_layer(p2,16,16)
 w4,b4,h4,r4 = conn_layer(n3,1024)
 h4_drop = tf.nn.dropout(h4,keep_prob)
 w5,b5,h5,r5 = conn_layer(h4_drop,512)
 h5_drop = tf.nn.dropout(h5,keep_prob)
-w6,b6,y_,r6 = conn_layer(h5_drop,10,op_layer=True)
+w6,b6,y_,r6 = conn_layer(h5_drop,5,op_layer=True)
 
 
 """
@@ -139,7 +139,7 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
     acc = []
     with tf.Session(config=tf.ConfigProto(log_device_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
-        ckpt = 'model1_temp.ckpt'
+        ckpt = 'model1.ckpt'
         acc_file = []
         prev_acc = -1
         prev_ls = 999999999
@@ -178,10 +178,10 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
             if ((e+1)%(epochs/10) == 0) or epochs <= 50:
                 a,l = validate(net_loader,sess,True)
                 if len(acc)<=1:
-                    if a>=prev_acc:
+                    if a>=prev_acc and l<prev_ls:
                         save_path = saver.save(sess, net_loader.model_dir+ckpt)
                         print('Model saved at ', save_path)                      
-                elif a>=np.amax(acc) and a>=prev_acc:
+                elif a>=np.amax(acc) and l<np.amin(ls2) and a>=prev_acc and l<prev_ls:
                     save_path = saver.save(sess, net_loader.model_dir+ckpt)
                     print('Model saved at ', save_path)
                     acc_file = open(net_loader.model_dir+'prev_acc.txt','w')
