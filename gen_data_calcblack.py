@@ -72,6 +72,6 @@ while True:
 			print('Saved : ',img_name)
 	else:
 		break		
-		
+
 cap.release()
 cv2.destroyAllWindows()
