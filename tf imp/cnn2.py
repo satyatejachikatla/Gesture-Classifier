@@ -47,12 +47,12 @@ x_img = tf.reshape(x,[-1,128,128,1])
 w1,b1,h1,p1,n1 = conv_layer(x_img,128,16)
 w2,b2,h2,p2,n2 = conv_layer(p1,64,8)
 w3,b3,h3,p3,n3 = conv_layer(p2,32,16)
-w4,b4,h4,p4,n4 = conv_layer(p2,32,8)
+w4,b4,h4,p4,n4 = conv_layer(p2,16,8)
 w5,b5,h5,r5 = conn_layer(n3,1024)
 h5_drop = tf.nn.dropout(h5,keep_prob)
 w6,b6,h6,r6 = conn_layer(h5_drop,512)
 h6_drop = tf.nn.dropout(h6,keep_prob)
-w7,b7,h7,r7 = conn_layer(h6_drop,512)
+w7,b7,h7,r7 = conn_layer(h6_drop,216)
 h7_drop = tf.nn.dropout(h7,keep_prob)
 w8,b8,y_,r8 = conn_layer(h7_drop,10,op_layer=True)
 
@@ -174,7 +174,8 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
                 l += loss.eval(feed_dict={x:ip[0],y:ip[1],keep_prob:1.0})
                 a += np.mean(correct_prediction.eval(feed_dict={x:ip[0],y:ip[1],keep_prob:1.0}))
             l /= net_loader.train_size/batch_sz
-            a /= net_loader.train_size/batch_sz
+            a = a*batch_sz//net_loader.train_size
+            a = np.mean(a)
             print("Train loss: ",l)
             print("Train acc: ",a)
             ls.append(l)
