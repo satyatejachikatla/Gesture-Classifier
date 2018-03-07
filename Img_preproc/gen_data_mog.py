@@ -6,7 +6,7 @@ from glob import glob
 
 fgbg = cv2.createBackgroundSubtractorMOG2()
 n='5'
-count = len(glob('Data/'+n+'/*'))
+count = len(glob('../Data/'+n+'/*'))
 cap = cv2.VideoCapture(0)
 
 while(1):
@@ -23,7 +23,7 @@ while(1):
 			break
 		elif k == 32:
 			count+=1	
-			img_name='Data/'+n+'/'+strftime("%Y-%m-%d %H:%M:%S", gmtime())+'.jpg'
+			img_name='Data/'+n+'/'+strftime("%Y-%m-%d %H%M%S", gmtime())+'.jpg'
 			cv2.imwrite(img_name,cv2.cvtColor(fgmask[100:450,80:330],cv2.COLOR_GRAY2RGB))
 			print('Saved : ',img_name , count)
 	else:

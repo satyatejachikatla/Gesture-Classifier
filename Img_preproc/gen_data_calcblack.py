@@ -5,7 +5,7 @@ from random import randint
 from glob import glob
 
 n=input('Enter Class Folder:').strip()
-count = len(glob('Data/'+n+'/*'))
+count = len(glob('../Data/'+n+'/*'))
 print('Currently',count,'images present in folder.')
 cap = cv2.VideoCapture(0)
 
