@@ -40,28 +40,20 @@ def conn_layer(in_layer,out_nodes,op_layer=False,sigma=0.01,b=0.0):
 The architecture: 3 conv layers and  2 fc layers with dropout
 """
 x = tf.placeholder(tf.float32, shape=[None,128*128*1])
-y = tf.placeholder(tf.float32, shape=[None,10])
+y = tf.placeholder(tf.float32, shape=[None,5])
 learning_rate = tf.placeholder(tf.float32)
 keep_prob = tf.placeholder(tf.float32)
 x_img = tf.reshape(x,[-1,128,128,1])
-w1,b1,h1,p1,n1 = conv_layer(x_img,128,16)
-w2,b2,h2,p2,n2 = conv_layer(p1,64,8)
-w3,b3,h3,p3,n3 = conv_layer(p2,32,16)
-w4,b4,h4,p4,n4 = conv_layer(p2,16,8)
-w5,b5,h5,r5 = conn_layer(n3,1024)
-h5_drop = tf.nn.dropout(h5,keep_prob)
-w6,b6,h6,r6 = conn_layer(h5_drop,512)
-h6_drop = tf.nn.dropout(h6,keep_prob)
-w7,b7,h7,r7 = conn_layer(h6_drop,216)
-h7_drop = tf.nn.dropout(h7,keep_prob)
-w8,b8,y_,r8 = conn_layer(h7_drop,10,op_layer=True)
+w1,b1,h1,p1,n1 = conv_layer(x_img,64,8)
+w2,b2,h2,r2 = conn_layer(n1,32)
+w3,b3,y_,r3 = conn_layer(h2,5,op_layer=True)
 
 
 """
 Loss function: Softmax Cross Entropy
 """
 loss0 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=y_))
-reg = r5+r6+r7+r8
+reg = r2+r3
 loss = loss0 + 0.01*reg
 
 """
@@ -78,7 +70,7 @@ correct_prediction = tf.cast(tf.equal(tf.argmax(y,1),tf.argmax(y_,1)),tf.float32
 """
 Saver object to save and restore variables
 """
-saver = tf.train.Saver({'w1':w1,'b1':b1,'w2':w2,'b2':b2,'w3':w3,'b3':b3,'w4':w4,'b4':b4,'w5':w5,'b5':b5,'w6':w6,'b6':b6})
+saver = tf.train.Saver({'w1':w1,'b1':b1,'w2':w2,'b2':b2, 'w3':w3,'b3':b3})
 
 """
 Visualize output of a convolutional layer
@@ -172,10 +164,9 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
                 ip = net_loader.get_batch_random(batch_sz)
                 train_step.run(feed_dict={x:ip[0],y:ip[1],learning_rate:epsilon,keep_prob:0.5})
                 l += loss.eval(feed_dict={x:ip[0],y:ip[1],keep_prob:1.0})
-                a += np.mean(correct_prediction.eval(feed_dict={x:ip[0],y:ip[1],keep_prob:1.0}))
+                a += np.sum(correct_prediction.eval(feed_dict={x:ip[0],y:ip[1],keep_prob:1.0}))
             l /= net_loader.train_size/batch_sz
-            a = a*batch_sz//net_loader.train_size
-            a = np.mean(a)
+            a /= net_loader.train_size
             print("Train loss: ",l)
             print("Train acc: ",a)
             ls.append(l)
@@ -195,6 +186,13 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
                 acc.append(a)
                 ls2.append(l)
         a,l = validate(net_loader,sess,True)
+        if a>=np.amax(acc) and l<np.amin(ls2) and a>=prev_acc and l<prev_ls:
+            save_path = saver.save(sess, net_loader.model_dir+ckpt)
+            print('Model saved at ', save_path)
+            acc_file = open(net_loader.model_dir+'prev_acc.txt','w')
+            acc_file.write(str(a[0])+'\n')
+            acc_file.write(str(l)+'\n')
+            acc_file.close()
         print("Final test loss:",l," ; Final test accuracy:",a)
 ##        save_path = saver.save(sess, net_loader.model_dir+ckpt)
 ##        print('Model saved at ', save_path)
