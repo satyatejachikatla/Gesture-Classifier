@@ -237,14 +237,16 @@ def foo(net_loader):
                     # Our operations on the frame come here
                     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                     ggray=gray
-                    cv2.rectangle(ggray,(0,0),(128,128),(0,255,0),3)
+                    cv2.rectangle(ggray,(0,0),(128*2,128*2),(0,255,0),3)
                     # Display the resulting frame
                     cv2.imshow('gray',ggray)
                     cv2.waitKey(1)
 ##                    if cv2.waitKey(1) & 0xFF == ord('q'):
 ##                        break
 ##                    elif cv2.waitKey(1) & 0xFF == ord(' '):
-                    gray=gray[0:128,0:128]
+                    gray=gray[0:128*2,0:128*2]
+                    height, width = gray.shape[:2]
+                    gray = cv2.resize(gray,(int(0.5*width), int(0.5*height)), interpolation = cv2.INTER_CUBIC)
                     gray=np.reshape(gray,[1,128*128])
                     print(net_loader.nums_class[sess.run(tf.argmax(y_,1),feed_dict={x:gray,keep_prob:1.0})[0]])
                     
