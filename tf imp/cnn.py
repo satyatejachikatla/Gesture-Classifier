@@ -46,21 +46,21 @@ y = tf.placeholder(tf.float32, shape=[None,5])
 learning_rate = tf.placeholder(tf.float32)
 keep_prob = tf.placeholder(tf.float32)
 x_img = tf.reshape(x,[-1,128,128,1])
-w1,b1,h1,n1 = conv_layer(x_img,64,16)
-w2,b2,h2,n2 = conv_layer(n1,32,8)
-w3,b3,h3,n3 = conv_layer(n2,16,16)
-w4,b4,h4,r4 = conn_layer(n3,1024)
-h4_drop = tf.nn.dropout(h4,keep_prob)
-w5,b5,h5,r5 = conn_layer(h4_drop,512)
-h5_drop = tf.nn.dropout(h5,keep_prob)
-w6,b6,y_,r6 = conn_layer(h5_drop,5,op_layer=True)
+w0,b0,h0,n0 = conv_layer(x_img,8,2)
+w1,b1,h1,r1 = conn_layer(n0,2048)
+h1_drop = tf.nn.dropout(h1,keep_prob)
+w2,b2,h2,r2 = conn_layer(h1_drop,1024)
+h2_drop = tf.nn.dropout(h2,keep_prob)
+w3,b3,h3,r3 = conn_layer(h2_drop,512)
+h3_drop = tf.nn.dropout(h3,keep_prob)
+w4,b4,y_,r4 = conn_layer(h3_drop,5,op_layer=True)
 
 
 """
 Loss function: Softmax Cross Entropy
 """
 loss0 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=y_))
-reg = r4+r5+r6
+reg = r1+r2+r3+r4
 loss = loss0 + 0.01*reg
 
 """
@@ -77,7 +77,7 @@ correct_prediction = tf.cast(tf.equal(tf.argmax(y,1),tf.argmax(y_,1)),tf.float32
 """
 Saver object to save and restore variables
 """
-saver = tf.train.Saver({'w1':w1,'b1':b1,'w2':w2,'b2':b2,'w3':w3,'b3':b3,'w4':w4,'b4':b4,'w5':w5,'b5':b5,'w6':w6,'b6':b6})
+saver = tf.train.Saver({'w0':w0,'b0':b0,'w1':w1,'b1':b1,'w2':w2,'b2':b2,'w3':w3,'b3':b3,'w4':w4,'b4':b4})
 
 """
 Visualize output of a convolutional layer
@@ -141,7 +141,7 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
     acc = []
     with tf.Session(config=tf.ConfigProto(log_device_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
-        ckpt = 'model1_temp.ckpt'
+        ckpt = 'model_temp.ckpt'
         acc_file = []
         prev_acc = -1
         prev_ls = 999999999
@@ -228,7 +228,7 @@ With video check
 """
 def foo(net_loader):
         with tf.Session() as sess:
-                ckpt = 'model1.ckpt'
+                ckpt = 'model_temp.ckpt'
                 saver.restore(sess, net_loader.model_dir+ckpt)
                 cap = cv2.VideoCapture(0)
                 
@@ -239,19 +239,23 @@ def foo(net_loader):
                     # Our operations on the frame come here
                     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                     ggray=gray
-                    cv2.rectangle(ggray,(0,0),(128*2,128*2),(0,255,0),3)
                     # Display the resulting frame
-                    cv2.imshow('gray',ggray)
-                    cv2.waitKey(1)
+                    
 ##                    if cv2.waitKey(1) & 0xFF == ord('q'):
 ##                        break
 ##                    elif cv2.waitKey(1) & 0xFF == ord(' '):
                     gray=gray[0:128*2,0:128*2]
+                    cv2.imshow('gray',gray)
+                    cv2.waitKey(1)
                     height, width = gray.shape[:2]
                     gray = cv2.resize(gray,(int(0.5*width), int(0.5*height)), interpolation = cv2.INTER_CUBIC)
                     gray=np.reshape(gray,[1,128*128])
+                    nn_img = sess.run(n0,feed_dict={x:gray,keep_prob:1.0})
+                    for i in range(0,nn_img.shape[3]-3,3):
+                        cv2.imshow('frame'+str(i),nn_img[0,:,:,i:i+3])
+                        if cv2.waitKey(1) & 0xFF == ord(' '):
+                            break
                     print(net_loader.nums_class[sess.run(tf.argmax(y_,1),feed_dict={x:gray,keep_prob:1.0})[0]])
-                    
                 # When everything done, release the capture
                 cap.release()
                 cv2.destroyAllWindows()
