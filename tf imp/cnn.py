@@ -7,12 +7,14 @@ def conv_layer(in_layer,out_chan,size,sigma=0.01,b=0.0,strd=[1,1,1,1],pool=True)
     in_chan = in_layer.shape.as_list()[3]
     w = tf.Variable(tf.truncated_normal([size,size,in_chan,out_chan],stddev=sigma))
     b = tf.Variable(tf.constant(b, shape=[out_chan]))
-    h = tf.nn.relu(tf.nn.conv2d(in_layer, w, strides=strd,padding='VALID')+b)
-    p = tf.nn.max_pool(h,ksize = [1,4,4,1], strides = [1,2,2,1], padding='VALID')
-    n = tf.nn.local_response_normalization(p, depth_radius=min(4,out_chan-2))
-    n1 = tf.nn.local_response_normalization(h,depth_radius=min(4,out_chan-2))
+    h_ = tf.nn.conv2d(in_layer, w, strides=strd,padding='VALID')+b
+    p = tf.nn.max_pool(h_,ksize = [1,4,4,1], strides = [1,2,2,1], padding='VALID')
+    h = tf.nn.relu(p)
+    n = tf.nn.local_response_normalization(h, depth_radius=min(4,out_chan-2))
     if pool:
-        return w,b,h,p,n
+        return w,b,h,n
+    h = tf.nn.relu(h_)
+    n1 = tf.nn.local_response_normalization(h,depth_radius=min(4,out_chan-2))
     return w,b,h,n1
 
 
@@ -40,18 +42,18 @@ def conn_layer(in_layer,out_nodes,op_layer=False,sigma=0.01,b=0.0):
 The architecture: 3 conv layers and  2 fc layers with dropout
 """
 x = tf.placeholder(tf.float32, shape=[None,128*128*1])
-y = tf.placeholder(tf.float32, shape=[None,10])
+y = tf.placeholder(tf.float32, shape=[None,5])
 learning_rate = tf.placeholder(tf.float32)
 keep_prob = tf.placeholder(tf.float32)
 x_img = tf.reshape(x,[-1,128,128,1])
-w1,b1,h1,p1,n1 = conv_layer(x_img,64,16)
-w2,b2,h2,p2,n2 = conv_layer(n1,32,8)
-w3,b3,h3,p3,n3 = conv_layer(n2,16,16)
+w1,b1,h1,n1 = conv_layer(x_img,64,16)
+w2,b2,h2,n2 = conv_layer(n1,32,8)
+w3,b3,h3,n3 = conv_layer(n2,16,16)
 w4,b4,h4,r4 = conn_layer(n3,1024)
 h4_drop = tf.nn.dropout(h4,keep_prob)
 w5,b5,h5,r5 = conn_layer(h4_drop,512)
 h5_drop = tf.nn.dropout(h5,keep_prob)
-w6,b6,y_,r6 = conn_layer(h5_drop,10,op_layer=True)
+w6,b6,y_,r6 = conn_layer(h5_drop,5,op_layer=True)
 
 
 """
@@ -143,7 +145,7 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
         acc_file = []
         prev_acc = -1
         prev_ls = 999999999
-        if reload == 'True':
+        if reload == True:
             try:
                 saver.restore(sess, net_loader.model_dir+ckpt)
                 print("Model reloaded successfully.")
@@ -158,7 +160,7 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
                     pass
             except tf.errors.NotFoundError:
                 print("Model "+ckpt+" not found, will create new file")
-        elif reload == 'False':
+        else:
             print("'Reload' set to 'False', starting afresh")
 
         for e in range(epochs):
