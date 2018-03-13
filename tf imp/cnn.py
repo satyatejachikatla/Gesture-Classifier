@@ -46,9 +46,10 @@ y = tf.placeholder(tf.float32, shape=[None,5])
 learning_rate = tf.placeholder(tf.float32)
 keep_prob = tf.placeholder(tf.float32)
 x_img = tf.reshape(x,[-1,128,128,1])
-w0,b0,h0,n0 = conv_layer(x_img,8,2)
-w1,b1,h1,r1 = conn_layer(n0,2048)
-h1_drop = tf.nn.dropout(h1,keep_prob)
+w0,b0,h0,n0 = conv_layer(x_img,8,4)
+w5,b5,h5,n5 = conv_layer(n0,4,4)
+w1,b1,h1,r1 = conn_layer(n5,2048)
+h1_drop = tf.nn.dropout(n0,keep_prob)
 w2,b2,h2,r2 = conn_layer(h1_drop,1024)
 h2_drop = tf.nn.dropout(h2,keep_prob)
 w3,b3,h3,r3 = conn_layer(h2_drop,512)
@@ -77,7 +78,7 @@ correct_prediction = tf.cast(tf.equal(tf.argmax(y,1),tf.argmax(y_,1)),tf.float32
 """
 Saver object to save and restore variables
 """
-saver = tf.train.Saver({'w0':w0,'b0':b0,'w1':w1,'b1':b1,'w2':w2,'b2':b2,'w3':w3,'b3':b3,'w4':w4,'b4':b4})
+saver = tf.train.Saver({'w0':w0,'b0':b0,'w1':w1,'b1':b1,'w2':w2,'b2':b2,'w3':w3,'b3':b3,'w4':w4,'b4':b4,'w5':w5,'b5':b5})
 
 """
 Visualize output of a convolutional layer
