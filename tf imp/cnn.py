@@ -41,8 +41,9 @@ def conn_layer(in_layer,out_nodes,op_layer=False,sigma=0.01,b=0.0):
 """
 The architecture: 3 conv layers and  2 fc layers with dropout
 """
+output_classes = 6
 x = tf.placeholder(tf.float32, shape=[None,128*128*1])
-y = tf.placeholder(tf.float32, shape=[None,5])
+y = tf.placeholder(tf.float32, shape=[None,output_classes])
 learning_rate = tf.placeholder(tf.float32)
 keep_prob = tf.placeholder(tf.float32)
 x_img = tf.reshape(x,[-1,128,128,1])
@@ -53,7 +54,7 @@ w4,b4,h4,r4 = conn_layer(n3,1024)
 h4_drop = tf.nn.dropout(h4,keep_prob)
 w5,b5,h5,r5 = conn_layer(h4_drop,512)
 h5_drop = tf.nn.dropout(h5,keep_prob)
-w6,b6,y_,r6 = conn_layer(h5_drop,5,op_layer=True)
+w6,b6,y_,r6 = conn_layer(h5_drop,output_classes,op_layer=True)
 
 
 """
@@ -90,13 +91,13 @@ def visualize_layer(layer,sess):
         img = img[:,:,:ch]
     ip = cv2.resize(img,(128,128),interpolation=cv2.INTER_AREA).reshape(128*128*ch)
     unit = sess.run(layer,feed_dict = {x:[ip]})
-##    m = unit[0][0][0][0]
-##    for i in range(unit.shape[0]):
-##        for j in range(unit.shape[1]):
-##            for k in range(unit.shape[2]):
-##                for l in range(unit.shape[3]):
-##                    m = max(m,unit[i][j][k][l])
-##    unit = unit*255/m
+##  m = unit[0][0][0][0]
+##  for i in range(unit.shape[0]):
+##    for j in range(unit.shape[1]):
+##      for k in range(unit.shape[2]):
+##        for l in range(unit.shape[3]):
+##          m = max(m,unit[i][j][k][l])
+##  unit = unit*255/m
     cv2.imshow('frame',unit[0,:,:,:3])
     cv2.waitKey(1)
 
@@ -182,7 +183,7 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
                 if len(acc)<=1:
                     if a>=prev_acc:
                         save_path = saver.save(sess, net_loader.model_dir+ckpt)
-                        print('Model saved at ', save_path)                      
+                        print('Model saved at ', save_path)       
                 elif a>=np.amax(acc) and a>=prev_acc:
                     save_path = saver.save(sess, net_loader.model_dir+ckpt)
                     print('Model saved at ', save_path)
@@ -194,8 +195,8 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
                 ls2.append(l)
         a,l = validate(net_loader,sess,True)
         print("Final test loss:",l," ; Final test accuracy:",a)
-##        save_path = saver.save(sess, net_loader.model_dir+ckpt)
-##        print('Model saved at ', save_path)
+##    save_path = saver.save(sess, net_loader.model_dir+ckpt)
+##    print('Model saved at ', save_path)
         x1 = [i for i in range(len(ls))]
         x2 = [i for i in range(len(acc))]
         x3 = [i for i in range(len(ls2))]
@@ -243,9 +244,9 @@ def foo(net_loader):
                     # Display the resulting frame
                     cv2.imshow('gray',ggray)
                     cv2.waitKey(1)
-##                    if cv2.waitKey(1) & 0xFF == ord('q'):
-##                        break
-##                    elif cv2.waitKey(1) & 0xFF == ord(' '):
+##          if cv2.waitKey(1) & 0xFF == ord('q'):
+##            break
+##          elif cv2.waitKey(1) & 0xFF == ord(' '):
                     gray=gray[0:128*2,0:128*2]
                     height, width = gray.shape[:2]
                     gray = cv2.resize(gray,(int(0.5*width), int(0.5*height)), interpolation = cv2.INTER_CUBIC)
@@ -283,3 +284,87 @@ def foo1(net_loader):
                 cap.release()
                 cv2.destroyAllWindows()
 #merging with teja
+
+def test_wtih_cam(net_loader):
+    with tf.Session() as sess:
+        ckpt = 'model1_temp.ckpt'
+        saver.restore(sess, net_loader.model_dir+ckpt)
+        cap = cv2.VideoCapture(0)
+        #---------------------------------------------------------------------------------------#
+        #Capture Background
+        print('Enter \'c\' to capture empty background')
+        while True:
+            ret, frame = cap.read()
+            roi = frame[:256,:256,:]
+
+            hsv = cv2.cvtColor(roi,cv2.COLOR_BGR2HSV)
+            target = frame
+            hsvt = cv2.cvtColor(target,cv2.COLOR_BGR2HSV)
+
+            cv2.rectangle(frame,(0,0),(256,256),(0,255,0),3)
+            cv2.imshow('frame',frame[:256,:256,:])
+
+            if ret == True:
+                k = cv2.waitKey(30) & 0xff
+                if k == 27:
+                    break
+                elif k == ord('c'):
+                    # calculating object histogram
+                    roihist = cv2.calcHist([hsv],[0, 1], None, [180, 256], [0, 180, 0, 256] )
+                    # normalize histogram and apply backprojection
+                    cv2.normalize(roihist,roihist,0,255,cv2.NORM_MINMAX)
+                    break
+            else:
+                break
+        cv2.destroyAllWindows()
+        #---------------------------------------------------------------------------------------#
+        cv2.imshow('Actual',frame[:1,:1])
+        cv2.imshow('Output',frame[:1,:1])
+        cv2.moveWindow('Actual', 100,100)
+        cv2.moveWindow('Output', 600,100)
+        #---------------------------------------------------------------------------------------#
+        #Actual capture of images
+        print('Started the cam to predict')
+        while True:
+            ret, frame = cap.read()
+            if ret == True:
+                target = frame
+                hsvt = cv2.cvtColor(target,cv2.COLOR_BGR2HSV)
+                dst = cv2.calcBackProject([hsvt],[0,1],roihist,[0,180,0,256],1)
+
+                disc = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(10,10))
+                cv2.filter2D(dst,-1,disc,dst)
+
+                blur = cv2.GaussianBlur(dst, (11,11), 0)
+                blur = cv2.medianBlur(blur, 15)
+                
+                ret,thresh = cv2.threshold(blur,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+                thresh = cv2.merge((thresh,thresh,thresh))
+                thresh = cv2.bitwise_not(thresh)
+                op = frame[:256,:256,:]
+                
+                cv2.imshow('Actual',op)
+                
+                t_=thresh = thresh[:256,:256,:]
+                thresh = cv2.resize(thresh ,(128,128), interpolation = cv2.INTER_CUBIC)
+                thresh = cv2.cvtColor(thresh,cv2.COLOR_BGR2GRAY)
+                thresh = np.reshape(thresh , [1,128,128, 1])
+                thresh_ = np.reshape(thresh , [1,128*128*1])
+                ans = net_loader.nums_class[sess.run(tf.argmax(y_,1),feed_dict={x:thresh_,keep_prob:1.0})[0]]
+
+                print('Predicted :',ans)    
+                
+                op_ = np.zeros((100,256,3))
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                cv2.putText(op_,ans.split('/')[-1],(0,90), font, 2,(255,0,0),2,cv2.LINE_AA)
+                op = np.vstack((t_,op_))
+                cv2.imshow('Output', op)
+                
+                k = cv2.waitKey(30) & 0xff
+                if k == 27:
+                    break
+            else:
+                break      
+
+        cap.release()
+        cv2.destroyAllWindows()
