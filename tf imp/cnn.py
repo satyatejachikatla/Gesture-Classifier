@@ -41,27 +41,30 @@ def conn_layer(in_layer,out_nodes,op_layer=False,sigma=0.01,b=0.0):
 """
 The architecture: 3 conv layers and  2 fc layers with dropout
 """
+#double check layer inputs
 output_classes = 6
 x = tf.placeholder(tf.float32, shape=[None,128*128*1])
 y = tf.placeholder(tf.float32, shape=[None,output_classes])
 learning_rate = tf.placeholder(tf.float32)
 keep_prob = tf.placeholder(tf.float32)
 x_img = tf.reshape(x,[-1,128,128,1])
-w1,b1,h1,n1 = conv_layer(x_img,64,16)
-w2,b2,h2,n2 = conv_layer(n1,32,8)
+w1,b1,h1,n1 = conv_layer(x_img,8,4)
+w2,b2,h2,n2 = conv_layer(n1,4,2)
 w3,b3,h3,n3 = conv_layer(n2,16,16)
-w4,b4,h4,r4 = conn_layer(n3,1024)
+w4,b4,h4,r4 = conn_layer(n2,2048)
 h4_drop = tf.nn.dropout(h4,keep_prob)
-w5,b5,h5,r5 = conn_layer(h4_drop,512)
+w5,b5,h5,r5 = conn_layer(h4_drop,1024)
 h5_drop = tf.nn.dropout(h5,keep_prob)
-w6,b6,y_,r6 = conn_layer(h5_drop,output_classes,op_layer=True)
+w6,b6,h6,r6 = conn_layer(h5_drop,512)
+h6_drop = tf.nn.dropout(h6,keep_prob)
+w7,b7,y_,r7 = conn_layer(h4_drop,output_classes,op_layer=True)
 
 
 """
 Loss function: Softmax Cross Entropy
 """
 loss0 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=y_))
-reg = r1
+reg = r4
 loss = loss0 + 0.01*reg
 
 """
@@ -78,7 +81,7 @@ correct_prediction = tf.cast(tf.equal(tf.argmax(y,1),tf.argmax(y_,1)),tf.float32
 """
 Saver object to save and restore variables
 """
-saver = tf.train.Saver({'w0':w0,'b0':b0,'w1':w1,'b1':b1,'w2':w2,'b2':b2,'w3':w3,'b3':b3,'w4':w4,'b4':b4,'w5':w5,'b5':b5})
+saver = tf.train.Saver({'w1':w1,'b1':b1,'w2':w2,'b2':b2,'w3':w3,'b3':b3,'w4':w4,'b4':b4,'w5':w5,'b5':b5,'w6':w6,'b6':b6,'w7':w7,'b7':b7})
 
 """
 Visualize output of a convolutional layer
@@ -291,7 +294,7 @@ def foo1(net_loader):
 
 def test_wtih_cam(net_loader):
     with tf.Session() as sess:
-        ckpt = 'model1_temp.ckpt'
+        ckpt = 'model_temp.ckpt'
         saver.restore(sess, net_loader.model_dir+ckpt)
         cap = cv2.VideoCapture(0)
         #---------------------------------------------------------------------------------------#
