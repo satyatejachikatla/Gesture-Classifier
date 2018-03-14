@@ -10,11 +10,11 @@ def conv_layer(in_layer,out_chan,size,sigma=0.01,b=0.0,strd=[1,1,1,1],pool=True)
     h_ = tf.nn.conv2d(in_layer, w, strides=strd,padding='VALID')+b
     p = tf.nn.max_pool(h_,ksize = [1,4,4,1], strides = [1,2,2,1], padding='VALID')
     h = tf.nn.relu(p)
-    n = tf.nn.local_response_normalization(h, depth_radius=min(4,out_chan-2))
+    n = tf.nn.local_response_normalization(h, depth_radius=max(0,min(4,out_chan-2)))
     if pool:
         return w,b,h,n
     h = tf.nn.relu(h_)
-    n1 = tf.nn.local_response_normalization(h,depth_radius=min(4,out_chan-2))
+    n1 = tf.nn.local_response_normalization(h,depth_radius=max(min(4,out_chan-2)))
     return w,b,h,n1
 
 
@@ -41,27 +41,29 @@ def conn_layer(in_layer,out_nodes,op_layer=False,sigma=0.01,b=0.0):
 """
 The architecture: 3 conv layers and  2 fc layers with dropout
 """
+num_classes = 5
+##double check function arguments in final implementation
 x = tf.placeholder(tf.float32, shape=[None,128*128*1])
-y = tf.placeholder(tf.float32, shape=[None,5])
+y = tf.placeholder(tf.float32, shape=[None,num_classes])
 learning_rate = tf.placeholder(tf.float32)
 keep_prob = tf.placeholder(tf.float32)
 x_img = tf.reshape(x,[-1,128,128,1])
 w0,b0,h0,n0 = conv_layer(x_img,8,4)
-w5,b5,h5,n5 = conv_layer(n0,4,4)
+w5,b5,h5,n5 = conv_layer(n0,8,2)
 w1,b1,h1,r1 = conn_layer(n5,2048)
-h1_drop = tf.nn.dropout(n0,keep_prob)
+h1_drop = tf.nn.dropout(h1,keep_prob)
 w2,b2,h2,r2 = conn_layer(h1_drop,1024)
 h2_drop = tf.nn.dropout(h2,keep_prob)
 w3,b3,h3,r3 = conn_layer(h2_drop,512)
 h3_drop = tf.nn.dropout(h3,keep_prob)
-w4,b4,y_,r4 = conn_layer(h3_drop,5,op_layer=True)
+w4,b4,y_,r4 = conn_layer(h1_drop,num_classes,op_layer=True)
 
 
 """
 Loss function: Softmax Cross Entropy
 """
 loss0 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=y_))
-reg = r1+r2+r3+r4
+reg = r1
 loss = loss0 + 0.01*reg
 
 """
