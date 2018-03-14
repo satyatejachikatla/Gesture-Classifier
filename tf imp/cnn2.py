@@ -42,13 +42,13 @@ def conn_layer(in_layer,out_nodes,op_layer=False,sigma=0.01,b=0.0):
 The architecture: 3 conv layers and  2 fc layers with dropout
 """
 #double check layer inputs
-output_classes = 6
+output_classes = 5
 x = tf.placeholder(tf.float32, shape=[None,128*128*1])
 y = tf.placeholder(tf.float32, shape=[None,output_classes])
 learning_rate = tf.placeholder(tf.float32)
 keep_prob = tf.placeholder(tf.float32)
 x_img = tf.reshape(x,[-1,128,128,1])
-w1,b1,h1,n1 = conv_layer(x_img,8,4)
+w1,b1,h1,n1 = conv_layer(x_img,8,2)
 w2,b2,h2,n2 = conv_layer(n1,4,2)
 w3,b3,h3,n3 = conv_layer(n2,16,16)
 w4,b4,h4,r4 = conn_layer(n2,2048)
@@ -136,7 +136,7 @@ def validate(net_loader,sess,test=False):
         traceback.print_exc()
 
 
-ckpt = 'model_temp.ckpt'
+ckpt = 'model2_temp.ckpt'
 """ 
 Train the model. Inputs: number of epochs, learning rate, train and test data, and whether to continue training model or start afresh
 """
