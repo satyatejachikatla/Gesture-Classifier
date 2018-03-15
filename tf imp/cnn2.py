@@ -42,7 +42,7 @@ def conn_layer(in_layer,out_nodes,op_layer=False,sigma=0.01,b=0.0):
 The architecture: 3 conv layers and  2 fc layers with dropout
 """
 #double check layer inputs
-output_classes = 5
+output_classes = 6
 x = tf.placeholder(tf.float32, shape=[None,128*128*1])
 y = tf.placeholder(tf.float32, shape=[None,output_classes])
 learning_rate = tf.placeholder(tf.float32)
@@ -64,7 +64,7 @@ w7,b7,y_,r7 = conn_layer(h4_drop,output_classes,op_layer=True)
 Loss function: Softmax Cross Entropy
 """
 loss0 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=y_))
-reg = r4
+reg = r4+r7
 loss = loss0 + 0.01*reg
 
 """
@@ -244,17 +244,13 @@ def foo(net_loader):
                     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                     ggray=gray
                     # Display the resulting frame
-                    
-##                    if cv2.waitKey(1) & 0xFF == ord('q'):
-##                        break
-##                    elif cv2.waitKey(1) & 0xFF == ord(' '):
                     gray=gray[0:128*2,0:128*2]
                     cv2.imshow('gray',gray)
                     cv2.waitKey(1)
                     height, width = gray.shape[:2]
                     gray = cv2.resize(gray,(int(0.5*width), int(0.5*height)), interpolation = cv2.INTER_CUBIC)
                     gray=np.reshape(gray,[1,128*128])
-                    nn_img = sess.run(n0,feed_dict={x:gray,keep_prob:1.0})
+                    nn_img = sess.run(n2,feed_dict={x:gray,keep_prob:1.0})
                     for i in range(0,nn_img.shape[3]-3,3):
                         cv2.imshow('frame'+str(i),nn_img[0,:,:,i:i+3])
                         if cv2.waitKey(1) & 0xFF == ord(' '):
