@@ -8,7 +8,7 @@ def conv_layer(in_layer,out_chan,size,sigma=0.01,b=0.0,strd=[1,1,1,1],pool=True)
     w = tf.Variable(tf.truncated_normal([size,size,in_chan,out_chan],stddev=sigma))
     b = tf.Variable(tf.constant(b, shape=[out_chan]))
     h_ = tf.nn.conv2d(in_layer, w, strides=strd,padding='VALID')+b
-    p = tf.nn.max_pool(h_,ksize = [1,4,4,1], strides = [1,2,2,1], padding='VALID')
+    p = tf.nn.max_pool(h_,ksize = [1,2,2,1], strides = [1,2,2,1], padding='VALID')
     h = tf.nn.relu(p)
     n = tf.nn.local_response_normalization(h, depth_radius=max(0,min(4,out_chan-2)))
     if pool:
@@ -42,14 +42,14 @@ def conn_layer(in_layer,out_nodes,op_layer=False,sigma=0.01,b=0.0):
 The architecture: 3 conv layers and  2 fc layers with dropout
 """
 #double check layer inputs
-output_classes = 6
+output_classes = 5
 x = tf.placeholder(tf.float32, shape=[None,128*128*1])
 y = tf.placeholder(tf.float32, shape=[None,output_classes])
 learning_rate = tf.placeholder(tf.float32)
 keep_prob = tf.placeholder(tf.float32)
 x_img = tf.reshape(x,[-1,128,128,1])
-w1,b1,h1,n1 = conv_layer(x_img,8,2)
-w2,b2,h2,n2 = conv_layer(n1,4,2)
+w1,b1,h1,n1 = conv_layer(x_img,8,8)
+w2,b2,h2,n2 = conv_layer(n1,4,8)
 w3,b3,h3,n3 = conv_layer(n2,16,16)
 w4,b4,h4,r4 = conn_layer(n2,2048)
 h4_drop = tf.nn.dropout(h4,keep_prob)
@@ -87,20 +87,20 @@ saver = tf.train.Saver({'w1':w1,'b1':b1,'w2':w2,'b2':b2,'w3':w3,'b3':b3,'w4':w4,
 Visualize output of a convolutional layer
 """
 def visualize_layer(layer,sess):
-    img = cv2.imread('./New Data/Test/1/umaschd1.pgm',0)
+    img = cv2.imread('../N_Data/Train/1/1.jpg',0)
     ch = 1
     if len(img.shape) > 2:
         ch = min(3,img.shape[2])
         img = img[:,:,:ch]
     ip = cv2.resize(img,(128,128),interpolation=cv2.INTER_AREA).reshape(128*128*ch)
     unit = sess.run(layer,feed_dict = {x:[ip]})
-##  m = unit[0][0][0][0]
-##  for i in range(unit.shape[0]):
-##    for j in range(unit.shape[1]):
-##      for k in range(unit.shape[2]):
-##        for l in range(unit.shape[3]):
-##          m = max(m,unit[i][j][k][l])
-##  unit = unit*255/m
+    m = unit[0][0][0][0]
+    for i in range(unit.shape[0]):
+        for j in range(unit.shape[1]):
+          for k in range(unit.shape[2]):
+            for l in range(unit.shape[3]):
+              m = max(m,unit[i][j][k][l])
+    unit = unit*255/m
     cv2.imshow('frame',unit[0,:,:,:3])
     cv2.waitKey(1)
 
@@ -115,10 +115,13 @@ def validate(net_loader,sess,test=False):
     ls_t = 0
     test_data  = net_loader.test_data
     step = 1
-    out_str = 'validation loss:'
+    out_str = 'test loss:'
+    out_str2 = 'test acc:'
+
     if test == False:
         step = 4
-        out_str = 'test loss:'
+        out_str = 'validation loss:'
+        out_str2 = 'validation acc:'        
     try:
         for i in range(0,len(test_data),step):
             #print(file, lab)
@@ -130,13 +133,13 @@ def validate(net_loader,sess,test=False):
             ls2 += loss.eval(feed_dict={x:[ip], y:[lab], keep_prob:1.0})
         acc /= len(test_data)/step
         ls2 /= len(test_data)/step
-        print(out_str,ls2, '; test acc: ',acc)
+        print(out_str,ls2, out_str2,acc)
         return acc,ls2
     except:
         traceback.print_exc()
 
 
-ckpt = 'model2_temp.ckpt'
+ckpt = 'model3.ckpt'
 """ 
 Train the model. Inputs: number of epochs, learning rate, train and test data, and whether to continue training model or start afresh
 """
@@ -184,7 +187,7 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
             print("Train acc: ",a)
             ls.append(l)
             if ((e+1)%(epochs/10) == 0) or epochs <= 50:
-                a,l = validate(net_loader,sess,True)
+                a,l = validate(net_loader,sess)
                 if len(acc)<=1:
                     if a>=prev_acc:
                         save_path = saver.save(sess, net_loader.model_dir+ckpt)
