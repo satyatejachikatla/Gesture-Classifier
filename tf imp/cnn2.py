@@ -8,7 +8,7 @@ def conv_layer(in_layer,out_chan,size,sigma=0.01,b=0.0,strd=[1,1,1,1],pool=True)
     w = tf.Variable(tf.truncated_normal([size,size,in_chan,out_chan],stddev=sigma))
     b = tf.Variable(tf.constant(b, shape=[out_chan]))
     h_ = tf.nn.conv2d(in_layer, w, strides=strd,padding='VALID')+b
-    p = tf.nn.max_pool(h_,ksize = [1,2,2,1], strides = [1,2,2,1], padding='VALID')
+    p = tf.nn.max_pool(h_,ksize = [1,4,4,1], strides = [1,2,2,1], padding='VALID')
     h = tf.nn.relu(p)
     n = tf.nn.local_response_normalization(h, depth_radius=max(0,min(4,out_chan-2)))
     if pool:
@@ -42,7 +42,7 @@ def conn_layer(in_layer,out_nodes,op_layer=False,sigma=0.01,b=0.0):
 The architecture: 3 conv layers and  2 fc layers with dropout
 """
 #double check layer inputs
-output_classes = 5
+output_classes = 6
 x = tf.placeholder(tf.float32, shape=[None,128*128*1])
 y = tf.placeholder(tf.float32, shape=[None,output_classes])
 learning_rate = tf.placeholder(tf.float32)

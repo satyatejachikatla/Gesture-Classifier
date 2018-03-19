@@ -3,11 +3,25 @@ import cv2
 #from time import gmtime, strftime
 from random import randint
 from glob import glob
+import os
 
 n=input('Enter Class Folder:').strip()
 count = len(glob('Data/'+n+'/*'))
 print('Currently',count,'images present in folder.')
 cap = cv2.VideoCapture(0)
+try:
+	os.mkdir('./Data')
+except:
+	pass
+try:
+	os.mkdir('./Data/'+n)
+except:
+	pass
+try:
+	os.mkdir('./Data/'+n+'_coloured')
+except:	
+	pass
+
 
 #---------------------------------------------------------------------------------------#
 #Capture Background
@@ -69,6 +83,8 @@ while True:
 			count+=1	
 			img_name = 'Data/'+n+'/'+str(count)+'.jpg'
 			cv2.imwrite(img_name,thresh[:256,:256])
+			img_name_ = 'Data/'+n+'_coloured/'+str(count)+'.jpg'
+			cv2.imwrite(img_name_,frame)
 			print('Saved : ',img_name)
 	else:
 		break		

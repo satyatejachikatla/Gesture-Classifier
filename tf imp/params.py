@@ -1,6 +1,6 @@
 model_dir = '../Models/'
-train_dir = '../N_Data/Train/'
-test_dir = '../N_Data/Test'
+train_dir = 'CacBlackData/Train/'
+test_dir = 'CacBlackData/Test'
 epochs = 10
 batch_size = 20
 learning_rate = 1e-4
