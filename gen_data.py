@@ -3,7 +3,7 @@ cap = cv2.VideoCapture(0)
 num_classes = 0
 font = cv2.FONT_HERSHEY_SIMPLEX
 cont = 'y'
-phase = 'Train/'
+phase = 'Test/'
 if not os.path.exists('N_Data'):
     os.makedirs('N_Data')
     os.makedirs('N_Data/Train')

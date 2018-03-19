@@ -187,7 +187,7 @@ def train(epochs,batch_sz,epsilon,net_loader,reload):
             print("Train acc: ",a)
             ls.append(l)
             if ((e+1)%(epochs/10) == 0) or epochs <= 50:
-                a,l = validate(net_loader,sess)
+                a,l = validate(net_loader,sess,True)
                 if len(acc)<=1:
                     if a>=prev_acc:
                         save_path = saver.save(sess, net_loader.model_dir+ckpt)
@@ -234,7 +234,7 @@ def test(net_loader):
 """
 With video check
 """
-def foo(net_loader):
+def foo(net_loader, mirror=False):
         with tf.Session() as sess:
                 saver.restore(sess, net_loader.model_dir+ckpt)
                 cap = cv2.VideoCapture(0)
@@ -245,9 +245,12 @@ def foo(net_loader):
 
                     # Our operations on the frame come here
                     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    gray=gray[0:128*2,0:128*2]
+                    if mirror == True:
+                        gray = cv2.flip(gray,1)
                     ggray=gray
                     # Display the resulting frame
-                    gray=gray[0:128*2,0:128*2]
+                    
                     cv2.imshow('gray',gray)
                     cv2.waitKey(1)
                     height, width = gray.shape[:2]
@@ -290,7 +293,7 @@ def foo1(net_loader):
                 cv2.destroyAllWindows()
 #merging with teja
 
-def test_wtih_cam(net_loader):
+def test_wtih_cam(net_loader, mirror=False):
     with tf.Session() as sess:
         saver.restore(sess, net_loader.model_dir+ckpt)
         cap = cv2.VideoCapture(0)
@@ -299,6 +302,7 @@ def test_wtih_cam(net_loader):
         print('Enter \'c\' to capture empty background')
         while True:
             ret, frame = cap.read()
+
             roi = frame[:256,:256,:]
 
             hsv = cv2.cvtColor(roi,cv2.COLOR_BGR2HSV)
@@ -332,7 +336,7 @@ def test_wtih_cam(net_loader):
         while True:
             ret, frame = cap.read()
             if ret == True:
-                target = frame
+                target = frame[:256,:256,:]
                 hsvt = cv2.cvtColor(target,cv2.COLOR_BGR2HSV)
                 dst = cv2.calcBackProject([hsvt],[0,1],roihist,[0,180,0,256],1)
 
@@ -346,10 +350,13 @@ def test_wtih_cam(net_loader):
                 thresh = cv2.merge((thresh,thresh,thresh))
                 thresh = cv2.bitwise_not(thresh)
                 op = frame[:256,:256,:]
-                
+                if mirror == True:
+                    op = cv2.flip(op,1)
                 cv2.imshow('Actual',op)
-                
-                t_=thresh = thresh[:256,:256,:]
+                t_=thresh
+                if mirror == True:
+                    thresh = cv2.flip(thresh,1)
+                    t_ = cv2.flip(t_,1)
                 thresh = cv2.resize(thresh ,(128,128), interpolation = cv2.INTER_CUBIC)
                 thresh = cv2.cvtColor(thresh,cv2.COLOR_BGR2GRAY)
                 thresh = np.reshape(thresh , [1,128,128, 1])
