@@ -34,8 +34,7 @@ class NetLoader:
                 self.class_nums[dirname]=i
                 i += 1
         for key in self.class_nums:
-            if not key.startswith('Test'):
-                self.nums_class[self.class_nums[key]] = key
+            self.nums_class[self.class_nums[key]] = key
         self.create_data()
 
 
