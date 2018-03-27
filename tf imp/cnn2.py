@@ -48,9 +48,9 @@ y = tf.placeholder(tf.float32, shape=[None,output_classes])
 learning_rate = tf.placeholder(tf.float32)
 keep_prob = tf.placeholder(tf.float32)
 x_img = tf.reshape(x,[-1,128,128,1])
-w1,b1,h1,n1 = conv_layer(x_img,8,4)
-w2,b2,h2,n2 = conv_layer(n1,4,4,psz=[1,8,8,1])
-w3,b3,h3,n3 = conv_layer(n2,16,16)
+w1,b1,h1,n1 = conv_layer(x_img,8,8)
+w2,b2,h2,n2 = conv_layer(n1,4,8)
+w3,b3,h3,n3 = conv_layer(n2,2,4)
 w4,b4,h4,r4 = conn_layer(n2,2048)
 h4_drop = tf.nn.dropout(h4,keep_prob)
 w5,b5,h5,r5 = conn_layer(h4_drop,1024)
@@ -257,8 +257,8 @@ def foo(net_loader, mirror=False):
                     gray = cv2.resize(gray,(int(0.5*width), int(0.5*height)), interpolation = cv2.INTER_CUBIC)
                     gray=np.reshape(gray,[1,128*128])
                     nn_img = sess.run(n2,feed_dict={x:gray,keep_prob:1.0})
-                    for i in range(0,nn_img.shape[3]-3,3):
-                        cv2.imshow('frame'+str(i),nn_img[0,:,:,i:i+3])
+                    for i in range(0,nn_img.shape[3]):
+                        cv2.imshow('frame'+str(i),nn_img[0,:,:,i])
                         if cv2.waitKey(1) & 0xFF == ord(' '):
                             break
                     print(net_loader.nums_class[sess.run(tf.argmax(y_,1),feed_dict={x:gray,keep_prob:1.0})[0]])
