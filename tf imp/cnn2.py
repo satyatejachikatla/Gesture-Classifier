@@ -42,7 +42,7 @@ def conn_layer(in_layer,out_nodes,op_layer=False,sigma=0.01,b=0.0):
 The architecture: 3 conv layers and  2 fc layers with dropout
 """
 #double check layer inputs
-output_classes = 5
+output_classes = 6
 x = tf.placeholder(tf.float32, shape=[None,128*128*1])
 y = tf.placeholder(tf.float32, shape=[None,output_classes])
 learning_rate = tf.placeholder(tf.float32)
@@ -256,9 +256,9 @@ def foo(net_loader, mirror=False):
                     height, width = gray.shape[:2]
                     gray = cv2.resize(gray,(int(0.5*width), int(0.5*height)), interpolation = cv2.INTER_CUBIC)
                     gray=np.reshape(gray,[1,128*128])
-                    nn_img = sess.run(n2,feed_dict={x:gray,keep_prob:1.0})
-                    for i in range(0,nn_img.shape[3]):
-                        cv2.imshow('frame'+str(i),nn_img[0,:,:,i])
+                    nn_img = sess.run(n1,feed_dict={x:gray,keep_prob:1.0})
+                    for i in range(0,nn_img.shape[3]-3):
+                        cv2.imshow('frame'+str(i),nn_img[0,:,:,i:i+3])
                         if cv2.waitKey(1) & 0xFF == ord(' '):
                             break
                     print(net_loader.nums_class[sess.run(tf.argmax(y_,1),feed_dict={x:gray,keep_prob:1.0})[0]])

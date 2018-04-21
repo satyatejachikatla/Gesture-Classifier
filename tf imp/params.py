@@ -1,7 +1,7 @@
 model_dir = '../Models/'
-train_dir = '../N_Data/Train/'
-test_dir = '../N_Data/Test/'
-epochs = 100
+train_dir = '../Coloured Data/'
+test_dir = '../T_Coloured Data/'
+epochs = 5
 batch_size = 20
 learning_rate = 1e-4
 reload_model = False
